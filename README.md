@@ -16,6 +16,9 @@ Los datos utilizados provienen de fuentes oficiales abiertas de la Secretaría d
 * **Frecuencia de Actualización:** Eventual.
 * * **Última Actualización / Cambio del Dataset:** 5 de octubre de 2026.
 
+## Visualización Interactiva
+👉 [Abrir Mapa de Estaciones Transformadoras en el Navegador](https://marcosleguizamon97.github.io/estaciones-transformadoras-argentina/)
+
 ## Fuentes de Datos
 * **Dataset Oficial:** [Transporte Eléctrico AT - Estaciones Transformadoras](http://datos.energia.gob.ar/dataset/transporte-electrico-at-estaciones-transformadoras) - Secretaría de Energía de la Nación.
 ---
