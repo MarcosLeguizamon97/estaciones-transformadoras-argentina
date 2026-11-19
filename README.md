@@ -16,6 +16,8 @@ Los datos utilizados provienen de fuentes oficiales abiertas de la Secretaría d
 * **Frecuencia de Actualización:** Eventual.
 * * **Última Actualización / Cambio del Dataset:** 5 de octubre de 2026.
 
+## Fuentes de Datos
+* **Dataset Oficial:** [Transporte Eléctrico AT - Estaciones Transformadoras](http://datos.energia.gob.ar/dataset/transporte-electrico-at-estaciones-transformadoras) - Secretaría de Energía de la Nación.
 ---
 
 ## 📂 Estructura del Proyecto
