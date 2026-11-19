@@ -5,32 +5,36 @@ install.packages("leaflet")
 library(tidyverse)
 library(sf)
 library(leaflet)
-library(tidyverse)
+library(jsonlite)
+library(htmlwidgets)
 
-estaciones <- read_csv("data/transporte-elctrico-at-estaciones-transformadoras.csv") 
+estaciones <- read_csv("data/transporte-elctrico-at-estaciones-transformadoras.csv")
 
-names(estaciones)
-head(estaciones)
-summary(estaciones)
-
-
-# 1. Transformación: Extraer longitud y latitud directamente de la columna geojson
+# 1. Transformación espacial de las 323 estaciones
 estaciones_nacionales <- estaciones %>%
   drop_na(geojson) %>%
   mutate(
-    # Extraer los números decimales dentro del texto JSON
     coordenadas = str_extract(geojson, "\\[-?[0-9.]+,\\s*-?[0-9.]+\\]"),
     coords_limpias = str_remove_all(coordenadas, "\\[|\\]"),
-    # Separar en longitud y latitud
     lon = as.numeric(word(coords_limpias, 1, sep = ",")),
     lat = as.numeric(word(coords_limpias, 2, sep = ","))
   ) %>%
   drop_na(lon, lat) %>%
-  # 2. Convertir a objeto espacial sf para todo el país
   st_as_sf(coords = c("lon", "lat"), crs = 4326)
 
+# 2. Definir SVG e icono de torre eléctrica
+svg_torre <- '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+  <circle cx="18" cy="18" r="16" fill="#ff7f00" stroke="#ffffff" stroke-width="2.5"/>
+  <path fill="#ffffff" d="M18 7l-4.5 18h2.2l1.4-5.5h1.8l1.4 5.5h2.2L18 7zm-3 8.5h6l-.4-1.6h-5.2l-.4 1.6zm.9 2.2h4.2l-.3-1.3h-3.6l-.3 1.3z"/>
+</svg>'
+
+svg_torre_uri <- paste0(
+  "data:image/svg+xml;utf8,",
+  URLencode(svg_torre, reserved = TRUE)
+)
+
 icono_torre <- makeIcon(
-  iconUrl = paste0("data:image/svg+xml;utf8,", URLencode(svg_torre, reserved = TRUE)),
+  iconUrl = svg_torre_uri,
   iconWidth = 36,
   iconHeight = 36,
   iconAnchorX = 18,
@@ -39,36 +43,32 @@ icono_torre <- makeIcon(
   popupAnchorY = -18
 )
 
+# 3. Preparar JSON con los campos del dataset
 datos_json <- estaciones_nacionales %>%
   mutate(
     lon = st_coordinates(.)[, 1],
     lat = st_coordinates(.)[, 2],
     nombre_limpio = replace_na(as.character(nombre), "Sin especificar"),
-
     propiedad_limpia = if_else(
       is.na(propiedad) | str_squish(as.character(propiedad)) == "",
       "Sin especificar",
       str_squish(as.character(propiedad))
     ),
-
     concesion_limpia = if_else(
       is.na(concesion) | str_squish(as.character(concesion)) == "",
       "Sin especificar",
       str_squish(as.character(concesion))
     ),
-
     tension_limpia = if_else(
       is.na(tension_entrada) | str_squish(as.character(tension_entrada)) == "",
       "Sin especificar",
       paste0(str_squish(as.character(tension_entrada)), " kV")
     ),
-
     potencia_limpia = if_else(
       is.na(potencia_instalada_mv),
       "Sin especificar",
       paste0(potencia_instalada_mv, " MVA")
     ),
-
     popup_html = paste0(
       "<div style='font-family:sans-serif;font-size:12px;line-height:1.4;'>",
       "<b style='color:#d95f02;font-size:14px;'>⚡ Estación Transformadora</b><br>",
@@ -82,7 +82,7 @@ datos_json <- estaciones_nacionales %>%
   ) %>%
   st_drop_geometry() %>%
   select(
-    nombre,
+    nombre_limpio,
     propiedad_limpia,
     concesion_limpia,
     tension_limpia,
@@ -96,18 +96,7 @@ datos_json <- estaciones_nacionales %>%
     na = "string"
   )
 
-svg_torre_uri <- paste0(
-  "data:image/svg+xml;utf8;",
-  URLencode(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
-      <circle cx="18" cy="18" r="16" fill="#ff7f00" stroke="#ffffff" stroke-width="2.5"/>
-      <path fill="#ffffff"
-        d="M18 7l-4.5 18h2.2l1.4-5.5h1.8l1.4 5.5h2.2L18 7zm-3 8.5h6l-.4-1.6h-5.2l-.4 1.6zm.9 2.2h4.2l-.3-1.3h-3.6l-.3 1.3z"/>
-    </svg>',
-    reserved = TRUE
-  )
-)
-
+# 4. Mapa con filtros interactivos
 mapa_estaciones <- leaflet(estaciones_nacionales) %>%
   setView(lng = -60, lat = -36, zoom = 6) %>%
   addTiles(group = "OpenStreetMap") %>%
@@ -139,14 +128,14 @@ mapa_estaciones <- leaflet(estaciones_nacionales) %>%
         controlDiv.innerHTML =
           "<b>Filtrar estaciones</b>" +
           "<label style=\\"display:block;margin-top:6px\\">Operador/concesionario:</label>" +
-          "<select id=\\"filtro-concesion\\" style=\\"width:100%;margin-top:3px;padding:4px\\"></select>" +
+          "<select id=\\"filtro-concesion\\" style=\\"width:100%%;margin-top:3px;padding:4px\\"></select>" +
           "<label style=\\"display:block;margin-top:6px\\">Propietario:</label>" +
-          "<select id=\\"filtro-propietario\\" style=\\"width:100%;margin-top:3px;padding:4px\\"></select>" +
+          "<select id=\\"filtro-propietario\\" style=\\"width:100%%;margin-top:3px;padding:4px\\"></select>" +
           "<label style=\\"display:block;margin-top:6px\\">Tensión de entrada:</label>" +
-          "<select id=\\"filtro-tension\\" style=\\"width:100%;margin-top:3px;padding:4px\\"></select>" +
+          "<select id=\\"filtro-tension\\" style=\\"width:100%%;margin-top:3px;padding:4px\\"></select>" +
           "<div id=\\"cantidad-estaciones\\" style=\\"margin-top:7px;font-weight:bold\\"></div>" +
           "<button id=\\"limpiar-filtros\\" type=\\"button\\" " +
-          "style=\\"margin-top:7px;width:100%;padding:5px\\">Limpiar filtros</button>";
+          "style=\\"margin-top:7px;width:100%%;padding:5px\\">Limpiar filtros</button>";
 
         L.DomEvent.disableClickPropagation(controlDiv);
         L.DomEvent.disableScrollPropagation(controlDiv);
@@ -243,11 +232,6 @@ mapa_estaciones <- leaflet(estaciones_nacionales) %>%
           });
 
         document.getElementById("limpiar-filtros").addEventListener(
-          "change",
-          function() {}
-        );
-
-        document.getElementById("limpiar-filtros").addEventListener(
           "click",
           function() {
             document.getElementById("filtro-concesion").value = "TODAS";
@@ -265,9 +249,6 @@ mapa_estaciones <- leaflet(estaciones_nacionales) %>%
     )
   )
 
+# 5. Exportar a docs/index.html para GitHub Pages
 dir.create("docs", showWarnings = FALSE)
-saveWidget(
-  mapa_estaciones,
-  file = "docs/index.html",
-  selfcontained = TRUE
-)
+saveWidget(mapa_estaciones, file = "docs/index.html", selfcontained = TRUE)
