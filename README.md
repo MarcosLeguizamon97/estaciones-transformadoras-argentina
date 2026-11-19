@@ -1,6 +1,6 @@
 # Análisis de Infraestructura de Transporte Eléctrico en Argentina
 
-Repositorio oficial para el análisis estadístico, procesamiento espacial y visualización de la infraestructura de transporte de energía eléctrica en Argentina, enfocado en las **Estaciones Transformadoras de Alta Tensión (AT)**. El proyecto está desarrollado íntegramente en **RStudio** y sincronizado mediante control de versiones con **Git y GitHub**.
+Repositorio para el análisis estadístico, procesamiento espacial y visualización de la infraestructura de transporte de energía eléctrica en Argentina, enfocado en las **Estaciones Transformadoras de Alta Tensión (AT)**. El proyecto está desarrollado íntegramente en **RStudio** y sincronizado mediante control de versiones con **Git y GitHub**.
 
 ---
 
